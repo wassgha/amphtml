@@ -142,6 +142,19 @@ export const VideoAttributes = {
    *
    */
   AUTOPLAY: 'autoplay',
+  /**
+   * auto-fullscreen
+   *
+   * If enabled, this automatically expands the currently visible video and
+   * playing to fullscreen when the user changes the device's orientation to
+   * landscape if the video was started following a user interaction
+   * (not autoplay)
+   *
+   * Dependent upon browser support of
+   * http://caniuse.com/#feat=screen-orientation
+   * and http://caniuse.com/#feat=fullscreen
+   */
+  AUTOFULLSCREEN: 'auto-fullscreen',
 };
 
 
