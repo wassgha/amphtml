@@ -370,13 +370,12 @@
             datetime="2015-09-14 13:00">September 14, 2015</time>
       </header>
       <figure>
-        <amp-img id="hero-img"
-            src="img/hero@1x.jpg"
-            srcset="img/hero@1x.jpg 1x, img/hero@2x.jpg 2x"
+        <amp-img tilt-to-pan id="hero-img"
+            src="http://www.hdwallpapersfreedownload.com/uploads/large/nature/wallpapers-hd-nature.jpg"
             layout="responsive" width="360" placeholder
             alt="Picture of two chairs on a lake shore with big pine trees"
             title="Opens image in a lightbox"
-            role="button" on="tap:headline-image-lightbox"
+            role="button"
             height="216" tabindex="0">
         </amp-img>
         <figcaption class='image'>
@@ -390,12 +389,12 @@
         <div class="jump-to">
           <h3>Jump To</h3>
           <ol>
-            <li><a on="tap:section1.scrollTo('position' = 'center')" href="#section1">Section 1</a></li>
+            <li><a on="tap:section1.scrollTo('position' = 'top')" href="#section1">Section 1</a></li>
             <li><a on="tap:section2.scrollTo('position' = 'center')" href="#section2">Section 2</a></li>
-            <li><a on="tap:section3.scrollTo('position' = 'center')" href="#section3">Section 3</a></li>
+            <li><a on="tap:section3.scrollTo('position' = 'bottom')" href="#section3">Section 3</a></li>
           </ol>
         </div>
-        <div class="article-body" itemprop="articleBody">
+        <div class="article-body" itemprop="articleBody" id="section1">
           <p>
             Lorem ipsum dolor sit amet, consectetur adipiscing elit.
             Curabitur ullamcorper turpis vel commodo scelerisque. Phasellus
@@ -415,16 +414,7 @@
             Nullam in libero nisi.
           </p>
 
-          <div class="ad-container">
-            <amp-ad width=300 height=250
-                type="a9"
-                data-aax_size="300x250"
-                data-aax_pubname="abc123"
-                data-aax_src="302">
-            </amp-ad>
-          </div>
-
-          <p>
+          <p id="section2">
             Sed pharetra semper fringilla. Nulla fringilla, neque eget
             varius suscipit, mi turpis congue odio, quis dignissim nisi
             nulla at erat. Duis non nibh vel erat vehicula hendrerit eget
@@ -443,11 +433,17 @@
 
           <figure>
             <amp-video
-              autoplay
-              src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4"
+              dock
+              custom-ctrls
+              title="Big Buck Bunny"
+              artist="Blender Foundation"
+              poster="https://peach.blender.org/wp-content/uploads/rodents.png"
+              album="The Peach Open Movie Project"
+              src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
               width="720"
               height="405"
               layout="responsive"
+              fullscreen-on-landscape
               controls>
             </amp-video>
             <figcaption class='video'>
@@ -474,18 +470,19 @@
 
           <figure>
             <amp-audio
-              src="https://www.dl-sounds.com/wp-content/uploads/edd/2017/07/The-Horizon-preview.mp3"
-              poster="https://images.pexels.com/photos/290101/pexels-photo-290101.jpeg?w=500&h=500&auto=compress&cs=tinysrgb"
-              title="The Horizon"
-              album="Royalty Free Music"
-              artist="Dl Sounds"
+              src="article/hamilton-2.mp3"
+              poster="https://images-na.ssl-images-amazon.com/images/I/61PJvVpvZbL.jpg"
+              title="Satisfied"
+              album="Hamilton"
+              artist="Lin-Manuel Miranda"
               height="50"
               width="auto"
+              floating-controls
               controls>
             </amp-video>
           </figure>
 
-          <p id="section1">
+          <p  id="section3">
             Curabitur convallis, urna quis pulvinar feugiat, purus diam
             posuere turpis, sit amet tincidunt purus justo et mi. Donec
             sapien urna, aliquam ut lacinia quis, varius vitae ex.
@@ -502,39 +499,15 @@
           </p>
 
           <figure>
-            <amp-img placeholder
-                src="img/sea@1x.jpg"
-                srcset="img/sea@1x.jpg 1x, img/sea@2x.jpg 2x"
+            <amp-img placeholder tilt-to-pan
+                src="http://cdn.playbuzz.com/cdn/925704be-9b8e-4dfc-852e-f24d720cb9c5/bcf39e88-5731-43bb-9d4b-e5b3b2b1fdf2.jpg"
                 layout="responsive" width="320"
-                on="tap:inline-img-lightbox"
                 alt="Fusce pretium tempor justo, vitae consequat dolor maximus eget."
                 height="180">
             </amp-img>
             <figcaption class='image'>
               Fusce pretium tempor justo, vitae consequat dolor maximus eget.
             </figcaption>
-            <amp-lightbox id="inline-img-lightbox" class="lightbox"
-                layout="nodisplay">
-
-              <div class="lightbox-content">
-                <div id="lightbox-close-btn"
-                  on="tap:inline-img-lightbox.close"
-                  role="button"
-                  tabindex="0">
-                  <h1>x</h1>
-                </div>
-                <amp-img id="floating-headline-img"
-                    src="img/sea@1x.jpg"
-                    srcset="img/sea@1x.jpg 1x, img/sea@2x.jpg 2x"
-                    alt="Image of a sea"
-                    placeholder
-                    width="360" height="216" layout="responsive">
-                </amp-img>
-                <p>
-                  Fusce pretium tempor justo, vitae consequat dolor maximus eget.
-                </p>
-              </div>
-            </amp-lightbox>
           </figure>
 
           <p>
@@ -549,13 +522,6 @@
             Ut elementum velit fermentum felis volutpat sodales in non libero.
             Aliquam erat volutpat.
           </p>
-
-          <div class="ad-container">
-            <amp-ad width=300 height=200
-                type="adsense"
-                data-ad-client="ca-pub-9350112648257122">
-            </amp-ad>
-          </div>
 
           <p id="section2">
             Morbi at velit vitae eros congue congue venenatis non dui.
