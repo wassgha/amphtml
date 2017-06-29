@@ -59,6 +59,10 @@ class AmpVideo extends AMP.BaseElement {
 
       /** @private {?boolean}  */
     this.muted_ = false;
+
+    this.duration = 0;
+
+    this.currentTime = 0;
   }
 
     /**
@@ -173,6 +177,7 @@ class AmpVideo extends AMP.BaseElement {
       // loadPromise for media elements listens to `loadstart`
     return this.loadPromise(this.video_).then(() => {
       this.element.dispatchCustomEvent(VideoEvents.LOAD);
+      this.duration = this.video_.duration;
     });
   }
 
@@ -188,6 +193,10 @@ class AmpVideo extends AMP.BaseElement {
         const evt = this.muted_ ? VideoEvents.MUTED : VideoEvents.UNMUTED;
         this.element.dispatchCustomEvent(evt);
       }
+    });
+
+    listen(video, 'timeupdate', () => {
+      this.currentTime = this.video_.currentTime;
     });
   }
 

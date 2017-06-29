@@ -32,6 +32,20 @@ import {ActionTrust} from './action-trust'; /* eslint no-unused-vars: 0 */
  */
 export class VideoInterface {
 
+  constructor() {
+    /**
+     * The video's duration in seconds
+     * @type {number}
+     */
+    this.duration;
+
+    /**
+     * Current playback time of the video in seconds
+     * @type {number}
+     */
+    this.currentTime;
+  }
+
   /**
    * Whether the component supports video playback in the current platform.
    * If false, component will be not treated as a video component.
@@ -219,4 +233,14 @@ export const VideoEvents = {
    * @event reload
    */
   RELOAD: 'reloaded',
+
+  /**
+   * time_update
+   *
+   * Fired whenever a play time update is made (at a rate TDB by the
+   * implementation)
+   *
+   * @event time_update
+   */
+  TIME_UPDATE: 'reloaded',
 };
