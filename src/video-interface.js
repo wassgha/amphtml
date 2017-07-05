@@ -155,6 +155,13 @@ export const VideoAttributes = {
    * and http://caniuse.com/#feat=fullscreen
    */
   AUTOFULLSCREEN: 'auto-fullscreen',
+  /**
+   * dock
+   *
+   * Setting the `dock` attribute on the component makes the video minimize
+   * to the corner when scrolled out of view and has been interacted with.
+   */
+  DOCK: 'dock',
 };
 
 
