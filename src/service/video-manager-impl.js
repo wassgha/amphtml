@@ -39,6 +39,7 @@ import {
   scopedQuerySelector,
 } from '../dom';
 import * as st from '../style';
+import * as draggable from '../draggable'
 
 /**
  * @const {number} Percentage of the video that should be in viewport before it
