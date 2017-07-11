@@ -944,6 +944,16 @@ class VideoEntry {
     // Don't minimize if video can never be hidden by scrolling to top/bottom
     if ((isBottom && spaceOnTop < this.viewport_.getHeight())
         || (isTop && spaceOnBottom < this.viewport_.getHeight())) {
+      console.log('spaceOnTop : ' + spaceOnTop);
+      console.log('spaceOnBottom : ' + spaceOnBottom);
+      console.log('this.viewport_.getHeight() : ' + this.viewport_.getHeight());
+      this.minimizePosition_ = MinimizePositions.INLINE;
+      return;
+    }
+
+    if (this.video.element./*OK*/offsetHeight > this.viewport_.getHeight()) {
+      console.log('this.video.element./*OK*/offsetHeight : ' + this.video.element./*OK*/offsetHeight);
+      console.log('this.viewport_.getHeight() : ' + this.viewport_.getHeight());
       this.minimizePosition_ = MinimizePositions.INLINE;
       return;
     }
@@ -1167,7 +1177,8 @@ class VideoEntry {
 
     // Snap to corners
     let transition;
-    if (Math.abs(dragCoord.velocity.x) <= STOP_THRESHOLD
+    if (!this.isDragging_
+        && Math.abs(dragCoord.velocity.x) <= STOP_THRESHOLD
         && Math.abs(dragCoord.velocity.y) <= STOP_THRESHOLD) {
       // X/Y Coordinates for each corner
       const top = DOCK_MARGIN;
@@ -1181,26 +1192,32 @@ class VideoEntry {
       // Determine corner and update this.minimizePosition_
       this.calcSnapCorner_(minimizedRect);
       // Set coordinates based on corner
+      let newPosX = dragCoord.position.x, newPosY = dragCoord.position.y;
       switch (this.minimizePosition_) {
         case MinimizePositions.BOTTOM_RIGHT:
-          dragCoord.position.x = right;
-          dragCoord.position.y = bottom;
+          newPosX = right;
+          newPosY = bottom;
           break;
         case MinimizePositions.TOP_RIGHT:
-          dragCoord.position.x = right;
-          dragCoord.position.y = top;
+          newPosX = right;
+          newPosY = top;
           break;
         case MinimizePositions.BOTTOM_LEFT:
-          dragCoord.position.x = left;
-          dragCoord.position.y = bottom;
+          newPosX = left;
+          newPosY = bottom;
           break;
         case MinimizePositions.TOP_LEFT:
-          dragCoord.position.x = left;
-          dragCoord.position.y = top;
+          newPosX = left;
+          newPosY = top;
           break;
       }
-      // Animate the snap transition
-      transition = 'transform .2s';
+      if (dragCoord.position.x != newPosX || dragCoord.position.y != newPosY) {
+        // Snap to the corner
+        dragCoord.position.x = newPosX;
+        dragCoord.position.y = newPosY;
+        // Animate the snap transition
+        transition = 'transform .2s';
+      }
     } else {
       transition = '';
     }
