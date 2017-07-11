@@ -191,6 +191,7 @@ export class VideoManager {
     this.entries_ = this.entries_ || [];
     const entry = new VideoEntry(this, video);
     this.maybeInstallVisibilityObserver_(entry);
+    this.maybeInstallOrientationObserver_(entry);
     this.maybeInstallPositionObserver_(entry);
     this.entries_.push(entry);
   }
@@ -229,7 +230,7 @@ export class VideoManager {
     // TODO(aghassemi): Remove this later. For now, the visibility observer
     // only matters for autoplay videos so no point in monitoring arbitrary
     // videos yet.
-    if (!entry.hasAutoplay) {
+    if (!entry.hasAutoplay && !entry.hasAutoFs) {
       return;
     }
 
@@ -251,6 +252,41 @@ export class VideoManager {
       this.viewport_.onScroll(scrollListener);
       this.viewport_.onChanged(scrollListener);
       this.scrollListenerInstalled_ = true;
+    }
+  }
+
+
+  /**
+   * Install the necessary listeners to be notified when the user changes
+   * the orientation of their device
+   *
+   * @param {VideoEntry} entry
+   * @private
+   */
+  maybeInstallOrientationObserver_(entry) {
+    // The orientation observer is only useful for automatically putting videos
+    // in fullscreen.
+    if (!entry.video.element.hasAttribute(VideoAttributes.AUTOFULLSCREEN)) {
+      return;
+    }
+
+    // TODO(@wassgha) Check support status for orientation API and updateVisibility
+    // this as needed.
+    const screen = this.ampdoc_.win.screen;
+    // Chrome apparently considers 'orientationchange' to be an untrusted
+    // event, while 'change' on screen.orientation is considered a user
+    // interaction
+    if (screen && screen.orientation !== undefined) {
+      const orient = /** @type {!ScreenOrientation} */ (screen.orientation);
+      listen(orient, 'change', () => {
+        entry.orientationChanged_();
+      });
+    } else {
+      // iOS Safari does not have screen.orientation but classifies
+      // 'orientationchange' as a user interaction.
+      listen(this.ampdoc_.win, 'orientationchange', () => {
+        entry.orientationChanged_();
+      });
     }
   }
 
@@ -387,6 +423,9 @@ class VideoEntry {
     /** @private {boolean} */
     this.isVisible_ = false;
 
+    /** @private {boolean} */
+    this.isFullscreenByOrientationChange_ = false;
+
     /** @private @const {!../service/vsync-impl.Vsync} */
     this.vsync_ = vsyncFor(this.ampdoc_.win);
 
@@ -450,6 +489,8 @@ class VideoEntry {
     this.hasDocking = element.hasAttribute(VideoAttributes.DOCK);
 
     this.hasAutoplay = element.hasAttribute(VideoAttributes.AUTOPLAY);
+
+    this.hasAutoFs = element.hasAttribute(VideoAttributes.AUTOFULLSCREEN);
 
     listenOncePromise(element, VideoEvents.LOAD)
         .then(() => this.videoLoaded());
@@ -525,6 +566,94 @@ class VideoEntry {
   videoVisibilityChanged_() {
     if (this.loaded_) {
       this.loadedVideoVisibilityChanged_();
+    }
+  }
+
+  /**
+   * Called when the orientation of the device changes
+   * @private
+   */
+  orientationChanged_() {
+    if (!viewerForDoc(this.ampdoc_).isVisible()) {
+      return;
+    }
+
+    const screen = this.ampdoc_.win.screen;
+
+    // Determine which implementation of the orientation angle to use
+    let angle;
+    if (this.ampdoc_.win.orientation !== undefined) {
+      angle = this.ampdoc_.win.orientation;
+    } else if (screen && screen.orientation) {
+      angle = screen.orientation.angle;
+    } else {
+      return;
+    }
+
+    if (this.isVisible_
+    && this.getPlayingState() == PlayingStates.PLAYING_MANUAL
+    && (Math.abs(angle) == 270 || Math.abs(angle) == 90)) {
+      this.enterFullscreen_();
+    } else if (this.isFullscreenByOrientationChange_) {
+      this.exitFullscreen_();
+    }
+  }
+
+  /**
+   * Makes the video element go fullscreen and updates its status
+   * @private
+   */
+  enterFullscreen_() {
+    // TODO(@wassgha) Refactor this to use code from video docking (wrapper)
+    const vidElement = scopedQuerySelector(
+        this.video.element,
+        'video, iframe'
+    );
+    // Determine which implementation of requestFullScreen to use
+    try {
+      const requestFullScreen = vidElement.webkitEnterFullscreen
+      || vidElement.webkitRequestFullScreen || vidElement.requestFullscreen
+      || vidElement.webkitEnterFullscreen || vidElement.msRequestFullscreen
+      || vidElement.mozRequestFullScreen;
+
+      requestFullScreen.call(vidElement);
+      this.isFullscreenByOrientationChange_ = true;
+    } catch (e) {
+      // Do nothing
+    }
+  }
+
+  /**
+   * Makes the video element quit fullscreen and updates its status
+   * @private
+   */
+  exitFullscreen_() {
+    // TODO(@wassgha) Refactor this to use code from video docking (wrapper)
+    const vidElement = scopedQuerySelector(
+        this.video.element,
+        'video, iframe'
+    );
+    try {
+      // Determine which implementation of exitFullScreen to use
+      let exitFullScreen = vidElement.webkitCancelFullScreen
+      || vidElement.cancelFullScreen || vidElement.webkitExitFullscreen
+      || vidElement.exitFullscreen || vidElement.mozCancelFullScreen
+      || vidElement.msExitFullscreen;
+      if (exitFullScreen) {
+        exitFullScreen.call(vidElement);
+        this.isFullscreenByOrientationChange_ = false;
+      } else {
+        exitFullScreen = this.ampdoc_.win.document.webkitCancelFullScreen
+        || this.ampdoc_.win.document.cancelFullScreen
+        || this.ampdoc_.win.document.webkitExitFullscreen
+        || this.ampdoc_.win.document.exitFullscreen
+        || this.ampdoc_.win.document.mozCancelFullScreen
+        || this.ampdoc_.win.document.msExitFullscreen;
+        exitFullScreen.call(this.ampdoc_.win.document);
+        this.isFullscreenByOrientationChange_ = false;
+      }
+    } catch (e) {
+      // Do nothing
     }
   }
 
