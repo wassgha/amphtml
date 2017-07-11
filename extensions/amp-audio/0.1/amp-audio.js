@@ -17,6 +17,17 @@
 import {Layout} from '../../../src/layout';
 import {assertHttpsUrl} from '../../../src/url';
 import {dev} from '../../../src/log';
+import {isFiniteNumber} from '../../../src/types';
+import {removeElement} from '../../../src/dom.js';
+import {Animation} from '../../../src/animation';
+import {listen} from '../../../src/event-helper';
+import * as tr from '../../../src/transition';
+import {
+  TapRecognizer,
+  DoubletapRecognizer,
+} from '../../../src/gesture-recognizers';
+import {Gestures} from '../../../src/gesture';
+import {CSS} from '../../../build/amp-audio-0.1.css';
 
 /**
  * Visible for testing only.
@@ -29,6 +40,18 @@ export class AmpAudio extends AMP.BaseElement {
 
     /** @private {?Element} */
     this.audio_ = null;
+
+    /** @private {?Element} */
+    this.floatingMuteBtn_ = null;
+
+    /** @private {boolean} */
+    this.scrollListenerInstalled_ = false;
+
+    /** @private {?UnlistenDef} */
+    this.volumeChangeUnlistener_ = null;
+
+    /** @private {boolean} */
+    this.hasFmb_ = this.element.hasAttribute('floating-mute-button');
   }
 
   /** @override */
@@ -65,6 +88,23 @@ export class AmpAudio extends AMP.BaseElement {
     });
     this.element.appendChild(audio);
     this.audio_ = audio;
+
+    // Activate the floating mute button
+    if (!this.scrollListenerInstalled_ && this.hasFmb_) {
+      const scrollListener = () => {
+        const change = this.element.getIntersectionChangeEntry();
+        const ratio = change.intersectionRatio;
+        const visible = isFiniteNumber(ratio) && ratio != 0;
+        if (visible) {
+          this.removeFloatingMuteBtn_();
+        } else if (!this.audio_.paused) {
+          this.createFloatingMuteBtn_(this.audio_);
+        }
+      };
+      this.getViewport().onScroll(scrollListener);
+      this.scrollListenerInstalled_ = true;
+    }
+
     return this.loadPromise(audio);
   }
 
@@ -74,6 +114,100 @@ export class AmpAudio extends AMP.BaseElement {
       this.audio_.pause();
     }
   }
+
+  /** @private */
+  createFloatingMuteBtn_(audio) {
+    if (this.floatingMuteBtn_) {
+      return;
+    }
+    const doc = this.element.ownerDocument;
+    const btn = doc.createElement('div');
+    btn.classList.add('amp-audio-floating-mute-btn');
+    this.element.ownerDocument.body.appendChild(btn);
+
+    // Different positioning based on page direction
+    const pageDir = doc.body.getAttribute('dir')
+                      || doc.documentElement.getAttribute('dir')
+                      || 'ltr';
+
+    btn.classList.toggle('rtl', pageDir != 'ltr');
+
+    // Raise the button if a sticky ad exists
+    const stickyadexists = doc.querySelector('amp-sticky-ad');
+    btn.classList.toggle('sticky-ad-exists', !!stickyadexists);
+
+    // Button pops in
+    const anim = new Animation(btn);
+    anim.add(0, tr.setStyles(dev().assertElement(btn), {
+      'transform': tr.scale(tr.numeric(0, 1.5)),
+    }), 0.5);
+    anim.add(0.5, tr.setStyles(dev().assertElement(btn), {
+      'transform': tr.scale(tr.numeric(1.5, 1)),
+    }), 0.5);
+    anim.start(300);
+
+    const gestures = Gestures.get(btn);
+
+    // Single tap toggles audio mute/unmute
+    gestures.onGesture(TapRecognizer, () => {
+      audio.muted = !audio.muted;
+    });
+
+    // Double-tap scrolls back to the element's position on the page
+    gestures.onGesture(DoubletapRecognizer, () => {
+      this.getViewport().animateScrollIntoView(audio);
+    });
+
+    // Change style when button is clicked (provides feedback since gestures
+    // are a bit slow)
+    listen(dev().assertElement(btn),
+        'touchstart', () => {
+          btn.classList.toggle('active', true);
+        });
+    listen(dev().assertElement(btn),
+        'touchend', () => {
+          setTimeout(() => {
+            btn.classList.toggle('active', false);
+          }, 300);
+        });
+
+
+    // Style the button based on whether the audio is muted or not
+    this.volumeChangeUnlistener_ = listen(dev().assertElement(this.audio_),
+        'volumechange', () => {
+          btn.classList.toggle('mute', audio.muted);
+          btn.classList.toggle('unmute', !audio.muted);
+        });
+
+    btn.classList.toggle('mute', audio.muted);
+    btn.classList.toggle('unmute', !audio.muted);
+
+    this.floatingMuteBtn_ = btn;
+  }
+
+  /** @private */
+  removeFloatingMuteBtn_() {
+    if (!this.floatingMuteBtn_) {
+      return;
+    }
+    const btn = this.floatingMuteBtn_;
+
+    // Button pops out
+    const anim = new Animation(btn);
+    anim.add(0, tr.setStyles(dev().assertElement(btn), {
+      'transform': tr.scale(tr.numeric(1, 1.5)),
+    }), 0.5);
+    anim.add(0.5, tr.setStyles(dev().assertElement(btn), {
+      'transform': tr.scale(tr.numeric(1.5, 0)),
+    }), 0.5);
+    anim.start(300).thenAlways(() => {
+      removeElement(btn);
+    });
+
+    this.volumeChangeUnlistener_();
+
+    this.floatingMuteBtn_ = null;
+  }
 }
 
-AMP.registerElement('amp-audio', AmpAudio);
+AMP.registerElement('amp-audio', AmpAudio, CSS);
