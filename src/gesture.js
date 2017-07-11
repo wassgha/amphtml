@@ -134,6 +134,11 @@ export class Gestures {
     this.element_.addEventListener('touchmove', this.boundOnTouchMove_);
     this.element_.addEventListener('touchcancel', this.boundOnTouchCancel_);
 
+    this.element_.addEventListener('mousedown', this.boundOnTouchStart_);
+    this.element_.addEventListener('mouseout', this.boundOnTouchEnd_);
+    this.element_.addEventListener('mousemove', this.boundOnTouchMove_);
+    this.element_.addEventListener('mousecancel', this.boundOnTouchCancel_);
+
     /** @private {boolean} */
     this.passAfterEvent_ = false;
   }
