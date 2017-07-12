@@ -39,8 +39,9 @@ import {
   scopedQuerySelector,
 } from '../dom';
 import {layoutRectLtwh, RelativePositions} from '../layout-rect';
+import {Animation} from '../animation';
 import * as st from '../style';
-import {Draggable} from '../draggable';
+import * as tr from '../transition';
 
 /**
  * @const {number} Percentage of the video that should be in viewport before it
@@ -66,13 +67,13 @@ const DOCK_MARGIN = 20;
 /**
  * @const {number} Amount by which the velocity decreseases every frame
  */
-const FRICTION_COEFF = 0.65;
+const FRICTION_COEFF = 0.55;
 
 /**
  * @const {number} Used to determine at which minmal velocity the element is
  * considered to have stopped moving
  */
-const STOP_THRESHOLD = 10;
+const STOP_THRESHOLD = 3;
 
 /**
  * Playing States
@@ -417,6 +418,9 @@ class VideoEntry {
     /** @private {?Element} */
     this.internalElement_ = null;
 
+    /** @private {?Element} */
+    this.draggingMask_ = null;
+
     /** @private {string} */
     this.pageDir_ = 'ltr';
 
@@ -431,6 +435,9 @@ class VideoEntry {
 
     /** @private {boolean} */
     this.isDragging_ = false;
+
+    /** @private {boolean} */
+    this.isSnapping_ = false;
 
     /** @private {boolean} */
     this.isDismissed_ = false;
@@ -568,11 +575,6 @@ class VideoEntry {
         },
       });
     });
-    // TODO(@wassgha) Add video element wrapper here
-    // console.log('video built');
-    // const test = this.ampdoc_.win.document.createElement('i-amphtml-dockable-video-drag-test');
-    // this.ampdoc_.win.document.documentElement.append(test);
-    // const draggable = new Draggable(this.ampdoc_, test);
   }
 
 
@@ -813,8 +815,10 @@ class VideoEntry {
                          - spaceOnTop
                          - this.video.element./*OK*/offsetHeight;
     // Don't minimize if video can never be hidden by scrolling to top/bottom
+    // or if it would always be minimized (its height is > the viewport's)
     if ((isBottom && spaceOnTop < this.viewport_.getHeight())
-        || (isTop && spaceOnBottom < this.viewport_.getHeight())) {
+        || (isTop && spaceOnBottom < this.viewport_.getHeight())
+        || this.video.element./*OK*/offsetHeight > this.viewport_.getHeight()) {
       this.minimizePosition_ = MinimizePositions.INLINE;
       return;
     }
@@ -904,10 +908,9 @@ class VideoEntry {
       this.initializeDragging_();
       this.drag_();
     } else {
+      this.finishDragging_();
       this.dockingState_ = DockingStates.DOCKING;
     }
-
-    // TODO(@wassim) Make minimized video draggable
   }
 
   /**
@@ -938,8 +941,10 @@ class VideoEntry {
     this.dragCoordinates_.previous.x = minimizedRect.left;
     this.dragCoordinates_.previous.y = minimizedRect.top;
 
+    this.draggingMask_ = this.createDraggingMask_();
+
     // Desktop listeners
-    listen(this.internalElement_, 'mousedown', e => {
+    listen(this.draggingMask_, 'mousedown', e => {
       e.preventDefault();
       this.isTouched_ = true;
       this.isDragging_ = false;
@@ -957,7 +962,7 @@ class VideoEntry {
       this.mouse_(e);
     });
     // Touch listeners
-    listen(this.internalElement_, 'touchstart', e => {
+    listen(this.draggingMask_, 'touchstart', e => {
       e.preventDefault();
       this.isTouched_ = true;
       this.isDragging_ = false;
@@ -991,10 +996,7 @@ class VideoEntry {
       || this.visibleHeight_ != 0
       || !this.internalElement_.classList.contains(DOCK_CLASS)
       || this.dockingState_ != DockingStates.DOCKED) {
-        st.setStyles(dev().assertElement(this.internalElement_), {
-          'transition': '',
-        });
-        return;
+      return;
     }
 
     const minimizedRect = this.internalElement_./*OK*/getBoundingClientRect();
@@ -1009,17 +1011,14 @@ class VideoEntry {
       dragCoord.velocity.x = (dragCoord.position.x - dragCoord.previous.x);
       dragCoord.velocity.y = (dragCoord.position.y - dragCoord.previous.y);
 
-      const vidCenterX = dragCoord.position.x + minimizedRect.width/2;
-      const vidCenterY = dragCoord.position.y + minimizedRect.height/2;
+      const vidCenterX = dragCoord.position.x + minimizedRect.width / 2;
+      const vidCenterY = dragCoord.position.y + minimizedRect.height / 2;
 
-      // console.log('vidCenterX  = ' + vidCenterX);
-      // console.log('vidCenterY  = ' + vidCenterY);
-
-      if (vidCenterX  > this.viewport_.getWidth()
+      if (vidCenterX > this.viewport_.getWidth()
           || vidCenterX < 0
           || vidCenterY > this.viewport_.getHeight()
           || vidCenterY < 0) {
-            this.isDismissed_ = true;
+        this.isDismissed_ = true;
       }
     } else {
       dragCoord.position.x += dragCoord.velocity.x;
@@ -1037,8 +1036,8 @@ class VideoEntry {
     }
 
     // Snap to corners
-    let transition;
-    if (Math.abs(dragCoord.velocity.x) <= STOP_THRESHOLD
+    if (!this.isDragging_ && !this.isSnapping_
+        && Math.abs(dragCoord.velocity.x) <= STOP_THRESHOLD
         && Math.abs(dragCoord.velocity.y) <= STOP_THRESHOLD) {
       // X/Y Coordinates for each corner
       const top = DOCK_MARGIN;
@@ -1052,45 +1051,39 @@ class VideoEntry {
       // Determine corner and update this.minimizePosition_
       this.calcSnapCorner_(minimizedRect);
       // Set coordinates based on corner
+      let newPosX = dragCoord.position.x, newPosY = dragCoord.position.y;
       switch (this.minimizePosition_) {
         case MinimizePositions.BOTTOM_RIGHT:
-          dragCoord.position.x = right;
-          dragCoord.position.y = bottom;
+          newPosX = right;
+          newPosY = bottom;
           break;
         case MinimizePositions.TOP_RIGHT:
-          dragCoord.position.x = right;
-          dragCoord.position.y = top;
+          newPosX = right;
+          newPosY = top;
           break;
         case MinimizePositions.BOTTOM_LEFT:
-          dragCoord.position.x = left;
-          dragCoord.position.y = bottom;
+          newPosX = left;
+          newPosY = bottom;
           break;
         case MinimizePositions.TOP_LEFT:
-          dragCoord.position.x = left;
-          dragCoord.position.y = top;
+          newPosX = left;
+          newPosY = top;
           break;
       }
       // Animate the snap transition
-      transition = 'transform .2s';
-    } else {
-      transition = '';
+      if (dragCoord.position.x != newPosX || dragCoord.position.y != newPosY) {
+        this.isSnapping_ = true;
+        // Snap to the calculated corner
+        this.animateSnap_(this.draggingMask_, newPosX, newPosY);
+        this.animateSnap_(this.internalElement_, newPosX, newPosY);
+      }
     }
 
     // Update the video's position
-    const translate = st.translate(
-      st.px(dragCoord.position.x),
-      st.px(dragCoord.position.y)
-    );
-    const scale = st.scale(DOCK_SCALE);
-    st.setStyles(dev().assertElement(this.internalElement_), {
-      'transform': translate + ' ' + scale,
-      'transition': transition,
-      'transformOrigin': 'top left',
-      'bottom': 'auto',
-      'top': '0px',
-      'right': 'auto',
-      'left': '0px',
-    });
+    if (!this.isSnapping_) {
+      this.dragMove_(this.draggingMask_);
+      this.dragMove_(this.internalElement_);
+    }
 
     // Re-run on every animation frame
     this.vsync_.mutate(() => {
@@ -1099,12 +1092,20 @@ class VideoEntry {
   }
 
   /**
-   * Reads mouse coordinate and saves them to an internal variable
-   * @param {Event} e
-   * @param {boolean} update_displacement
+   * Removes the draggable mask and ends dragging
    * @private
    */
-  mouse_(e, update_displacement = false) {
+  finishDragging_() {
+    this.removeDraggingMask_();
+  }
+
+  /**
+   * Reads mouse coordinate and saves them to an internal variable
+   * @param {Event} e
+   * @param {boolean} updateDisplacement
+   * @private
+   */
+  mouse_(e, updateDisplacement = false) {
     if (e.x) {
       this.dragCoordinates_.mouse.x = e.x;
       this.dragCoordinates_.mouse.y = e.y;
@@ -1112,7 +1113,7 @@ class VideoEntry {
       this.dragCoordinates_.mouse.x = e.touches[0].clientX;
       this.dragCoordinates_.mouse.y = e.touches[0].clientY;
     }
-    if (update_displacement) {
+    if (updateDisplacement) {
       this.dragCoordinates_.displacement.x = Math.abs(
           this.dragCoordinates_.position.x - this.dragCoordinates_.mouse.x
       );
@@ -1128,10 +1129,10 @@ class VideoEntry {
    * @private
    */
   calcSnapCorner_(minimizedRect) {
-    const viewportCenterX = this.viewport_.getWidth()/2;
-    const viewportCenterY = this.viewport_.getHeight()/2;
-    const centerX = this.dragCoordinates_.position.x + minimizedRect.width/2;
-    const centerY = this.dragCoordinates_.position.y + minimizedRect.height/2;
+    const viewportCenterX = this.viewport_.getWidth() / 2;
+    const viewportCenterY = this.viewport_.getHeight() / 2;
+    const centerX = this.dragCoordinates_.position.x + minimizedRect.width / 2;
+    const centerY = this.dragCoordinates_.position.y + minimizedRect.height / 2;
     if (centerX >= viewportCenterX) {
       if (centerY >= viewportCenterY) {
         this.minimizePosition_ = MinimizePositions.BOTTOM_RIGHT;
@@ -1232,6 +1233,53 @@ class VideoEntry {
   }
 
   /**
+   * Update's the elements coordinates to one of the set corners with a timeDef
+   * animation
+   * @private
+   * @param {?Element} element
+   */
+  animateSnap_(element, newPosX, newPosY) {
+    const anim = new Animation(element);
+    anim.add(0, tr.setStyles(dev().assertElement(element), {
+      'transform': tr.concat([
+        tr.translate(
+            tr.px(tr.numeric(this.dragCoordinates_.position.x, newPosX)),
+            tr.px(tr.numeric(this.dragCoordinates_.position.y, newPosY))
+        ),
+        tr.scale(tr.numeric(DOCK_SCALE, DOCK_SCALE)),
+      ]),
+    }), 1);
+    anim.start(200).thenAlways(() => {
+      // Update the positions
+      this.dragCoordinates_.position.x = newPosX;
+      this.dragCoordinates_.position.y = newPosY;
+      this.isSnapping_ = false;
+    });
+  }
+
+  /**
+   * Update's the elements coordinates according to the draggable's
+   * set coordinates
+   * @private
+   * @param {?Element} element
+   */
+  dragMove_(element) {
+    const translate = st.translate(
+        st.px(this.dragCoordinates_.position.x),
+        st.px(this.dragCoordinates_.position.y)
+    );
+    const scale = st.scale(DOCK_SCALE);
+    st.setStyles(dev().assertElement(element), {
+      'transform': translate + ' ' + scale,
+      'transformOrigin': 'top left',
+      'bottom': 'auto',
+      'top': '0px',
+      'right': 'auto',
+      'left': '0px',
+    });
+  }
+
+  /**
    * Creates a mask to overlay on top of an autoplay video to detect the first
    * user tap.
    * We have to do this since many players are iframe-based and we can not get
@@ -1248,6 +1296,46 @@ class VideoEntry {
     const mask = doc.createElement('i-amphtml-video-mask');
     mask.classList.add('i-amphtml-fill-content');
     return mask;
+  }
+
+  /**
+   * Creates a mask to overlay on top of a minimized video to capture drag
+   * and drop events on iframe-based players
+   * @private
+   * @return {!Element}
+   */
+  createDraggingMask_() {
+    const doc = this.ampdoc_.win.document;
+    const mask = doc.createElement('i-amphtml-dragging-mask');
+    st.setStyles(dev().assertElement(mask), {
+      'top': st.getStyle(this.internalElement_, 'top'),
+      'left': st.getStyle(this.internalElement_, 'left'),
+      'bottom': st.getStyle(this.internalElement_, 'bottom'),
+      'right': st.getStyle(this.internalElement_, 'right'),
+      'transform': st.getStyle(this.internalElement_, 'transform'),
+      'transformOrigin': st.getStyle(this.internalElement_, 'transform'),
+      'borderRadius': st.getStyle(this.internalElement_, 'borderRadius'),
+      'width': st.getStyle(this.internalElement_, 'width'),
+      'height': st.getStyle(this.internalElement_, 'height'),
+      'position': 'fixed',
+      'z-index': '3',
+      'background': 'transparent',
+    });
+    this.video.element.appendChild(mask);
+    return mask;
+  }
+
+
+  /**
+   * Removes the draggable mask so that the video can be interacted with
+   * again when inline
+   * @private
+   */
+  removeDraggingMask_() {
+    if (this.draggingMask_) {
+      removeElement(this.draggingMask_);
+      this.draggingMask_ = null;
+    }
   }
 
   /**

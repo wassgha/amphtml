@@ -689,17 +689,6 @@ i-amphtml-video-mask, i-amp-video-mask {
  * Video Docking
  */
 
- i-amphtml-dockable-video-drag-test {
-   width: 200px;
-   height: 100px;
-   background: red;
-   display: block;
-   position: fixed;
-   top: 0px;
-   left: 0px;
-   z-index: 999999;
- }
-
 .i-amphtml-dockable-video {
   padding: 0px;
   margin:0px;
