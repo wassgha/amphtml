@@ -1732,7 +1732,7 @@ class VideoEntry {
         });
         this.isShowingControls_ = false;
       });
-    }, 1000);
+    }, 1500);
   }
 
   /**
