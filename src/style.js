@@ -172,6 +172,15 @@ export function px(value) {
   return value + 'px';
 }
 
+/**
+ * Returns a percentage value.
+ * @param {number} value
+ * @return {string}
+ */
+export function percent(value) {
+  return value + '%';
+}
+
 
 /**
  * Returns a "translateX" for CSS "transform" property.
