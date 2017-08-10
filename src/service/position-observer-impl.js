@@ -29,6 +29,7 @@ import {
 import {serializeMessage} from '../../src/3p-frame-messaging';
 import {parseJson, tryParseJson} from '../../src/json.js';
 import {getData} from '../../src/event-helper';
+import {SizeReportingFidelity} from './viewport-impl';
 
 /** @const @private */
 const TAG = 'POSITION_OBSERVER';
@@ -307,7 +308,7 @@ export class AmpDocPositionObserver extends AbstractPositionObserver {
     const elementBox = layoutRectFromDomRect(
         entry.element./*OK*/getBoundingClientRect());
 
-    const viewportSize = this.viewport_.getSize();
+    const viewportSize = this.viewport_.getSize(SizeReportingFidelity.HIGH);
     const viewportBox =
         layoutRectLtwh(0, 0, viewportSize.width, viewportSize.height);
 
