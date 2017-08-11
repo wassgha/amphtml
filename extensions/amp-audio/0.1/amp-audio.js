@@ -160,7 +160,8 @@ export class AmpAudio extends AMP.BaseElement {
         playHandler,
         pauseHandler
     );
-
+  }
+  
   /** @private */
   createfloatingControls_(audio) {
     if (this.floatingControls_) {
