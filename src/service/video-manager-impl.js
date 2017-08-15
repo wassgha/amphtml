@@ -1258,42 +1258,36 @@ export class VideoEntry {
     this.dockState_ = DockStates.DOCKING;
     this.manager_.registerDocked(this);
 
-    ['mousedown', 'touchstart'].forEach(event => {
-      this.addListener_(
-          dev().assertElement(this.customControls_.getElement()),
-          event,
-          e => {
-            this.isTouched_ = true;
-            this.isDragging_ = false;
-            this.mouse_(e, true);
-          }
-      );
-    });
-
-    ['mouseup', 'touchend'].forEach(event => {
-      this.addListener_(this.ampdoc_.win.document, event, () => {
-        this.isTouched_ = false;
-        this.isDragging_ = false;
-        // Call drag one last time to see if the velocity is still not null
-        // in which case, drag would call itself again to finish the animation
-        this.drag_();
-      });
-    });
-
-    ['mousemove', 'touchmove'].forEach(event => {
-      this.addListener_(this.ampdoc_.win.document, event, e => {
-        // TODO(@wassgha) Make this passive once the PR goes through
-        // TODO(@wassgha) Unlisten to this event as soon as we stop dragging
-        this.isDragging_ = this.isTouched_;
-        if (this.isDragging_) {
-          e.preventDefault();
-          // Start dragging
-          this.dockState_ = DockStates.DRAGGABLE;
-          this.drag_();
+    this.addListener_(
+        dev().assertElement(this.customControls_.getElement()),
+        'mousedown touchstart',
+        e => {
+          this.isTouched_ = true;
+          this.isDragging_ = false;
+          this.mouse_(e, true);
         }
-        this.mouse_(e);
-      }, true, false);
+    );
+
+    this.addListener_(this.ampdoc_.win.document, 'mouseup touchend', () => {
+      this.isTouched_ = false;
+      this.isDragging_ = false;
+      // Call drag one last time to see if the velocity is still not null
+      // in which case, drag would call itself again to finish the animation
+      this.drag_();
     });
+
+    this.addListener_(this.ampdoc_.win.document, 'mousemove touchmove', e => {
+      // TODO(@wassgha) Make this passive once the PR goes through
+      // TODO(@wassgha) Unlisten to this event as soon as we stop dragging
+      this.isDragging_ = this.isTouched_;
+      if (this.isDragging_) {
+        e.preventDefault();
+        // Start dragging
+        this.dockState_ = DockStates.DRAGGABLE;
+        this.drag_();
+      }
+      this.mouse_(e);
+    }, true, false);
   }
 
   /**
@@ -1392,22 +1386,22 @@ export class VideoEntry {
   /**
    * Listens for the specified event on the element and records unlistener
    * @param {!EventTarget} element
-   * @param {string} eventType
+   * @param {string} eventTypes
    * @param {function(!Event)} listener
-   * @param {boolean} opt_capture
-   * @param {boolean} opt_passive
+   * @param {Object=} opt_evtListenerOpts
    * @private
    */
-  addListener_(element, eventType,
-              listener, opt_capture = false,
-              opt_passive = false) {
-    this.dragUnlisteners_.push(
-        listen(
-            element,
-            eventType,
-            listener
-        )
-    );
+  addListener_(element, eventTypes, listener, opt_evtListenerOpts) {
+    eventTypes.split(' ').forEach(eventType => {
+        this.dragUnlisteners_.push(
+            listen(
+                element,
+                eventType,
+                listener,
+                opt_evtListenerOpts
+            )
+        );
+    });
   }
 
   /**
