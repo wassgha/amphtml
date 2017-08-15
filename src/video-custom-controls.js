@@ -109,7 +109,7 @@ export class CustomControls {
    * @return {!Element}
    */
   getElement() {
-    return dev.assertElement(this.ctrlContainer_);
+    return dev().assertElement(this.ctrlContainer_);
   }
 
   /**
@@ -141,15 +141,16 @@ export class CustomControls {
   createVolumeControls_() {
     const doc = this.ampdoc_.win.document;
     const volumeContainer = doc.createElement('amp-custom-controls-volume');
-    const volumeSlider = createElementWithAttributes(
-      doc, 'input', {
-        'type': 'range',
-        'min': 0,
-        'max': 100,
-        'value': 0,
-      }
-    );
-    volumeSlider.classList.add('amp-custom-controls-volume-indicator');
+    // const volumeSlider = createElementWithAttributes(
+    //     doc, 'input',
+    //     {
+    //       'type': 'range',
+    //       'min': '0',
+    //       'max': '100',
+    //       'value': '0',
+    //     }
+    // );
+    // volumeSlider.classList.add('amp-custom-controls-volume-indicator');
     const muteBtnWrap = doc.createElement('amp-custom-controls-icon-wrapper');
     muteBtnWrap.classList.add('amp-custom-controls-mute');
     const muteBtn = this.createIcon_(
@@ -157,7 +158,7 @@ export class CustomControls {
     );
     muteBtnWrap.appendChild(muteBtn);
     volumeContainer.appendChild(muteBtnWrap);
-    volumeContainer.appendChild(volumeSlider);
+    // volumeContainer.appendChild(volumeSlider);
     listen(muteBtnWrap, 'click', () => {
       if (this.entry_.isMuted()) {
         this.entry_.video.unmute();
@@ -166,15 +167,15 @@ export class CustomControls {
       }
     });
     this.listenMultiple_(
-      this.entry_.video.element,
-      [VideoEvents.MUTED, VideoEvents.UNMUTED],
-      e => {
-        if (e.type == VideoEvents.MUTED) {
-          this.changeIcon_(muteBtn, 'mute');
-        } else {
-          this.changeIcon_(muteBtn, 'volume-max');
+        this.entry_.video.element,
+        [VideoEvents.MUTED, VideoEvents.UNMUTED],
+        e => {
+          if (e.type == VideoEvents.MUTED) {
+            this.changeIcon_(muteBtn, 'mute');
+          } else {
+            this.changeIcon_(muteBtn, 'volume-max');
+          }
         }
-      }
     );
     return volumeContainer;
   }
@@ -198,7 +199,8 @@ export class CustomControls {
    */
   createPlayPauseBtn_(loadingElement) {
     const doc = this.ampdoc_.win.document;
-    const playpauseBtnWrap = doc.createElement('amp-custom-controls-icon-wrapper');
+    const playpauseBtnWrap =
+      doc.createElement('amp-custom-controls-icon-wrapper');
     playpauseBtnWrap.classList.add('amp-custom-controls-playpause');
     const playpauseBtn = this.createIcon_('play');
     playpauseBtnWrap.appendChild(playpauseBtn);
@@ -216,19 +218,19 @@ export class CustomControls {
       }
     });
     this.listenMultiple_(this.entry_.video.element,
-      [VideoEvents.PLAYING, VideoEvents.PAUSE],
-      e => {
-        loadingElement.classList.toggle('amp-custom-controls-loading', false);
-        if (e.type == VideoEvents.PAUSE) {
-          this.changeIcon_(playpauseBtn, 'play');
-          this.showControls();
-          if (this.controlsTimer_) {
-            clearTimeout(this.controlsTimer_);
+        [VideoEvents.PLAYING, VideoEvents.PAUSE],
+        e => {
+          loadingElement.classList.toggle('amp-custom-controls-loading', false);
+          if (e.type == VideoEvents.PAUSE) {
+            this.changeIcon_(playpauseBtn, 'play');
+            this.showControls();
+            if (this.controlsTimer_) {
+              clearTimeout(this.controlsTimer_);
+            }
+          } else {
+            this.changeIcon_(playpauseBtn, 'pause');
           }
-        } else {
-          this.changeIcon_(playpauseBtn, 'pause');
         }
-      }
     );
     return playpauseBtnWrap;
   }
@@ -251,9 +253,11 @@ export class CustomControls {
       progressTime./*OK*/innerText = currentFormatted + ' / ' + totalFormatted;
     };
 
-    this.listenMultiple_(this.entry_.video.element,
-           [VideoEvents.TIME_UPDATE, VideoEvents.LOAD],
-           updateProgress.bind(this));
+    this.listenMultiple_(
+        this.entry_.video.element,
+        [VideoEvents.TIME_UPDATE, VideoEvents.LOAD],
+        updateProgress.bind(this)
+    );
 
     return progressTime;
   }
@@ -298,9 +302,10 @@ export class CustomControls {
       scrubberTouched = true;
     };
     [totalBar, scrubber].forEach(element => {
-      this.listenMultiple_(element,
-        'mousedown touchstart',
-        toggleScrubberTouched.bind(this)
+      this.listenMultiple_(
+          element,
+          'mousedown touchstart',
+          toggleScrubberTouched.bind(this)
       );
     });
 
@@ -343,9 +348,11 @@ export class CustomControls {
       });
     };
 
-    listen(this.entry_.video.element,
-           [VideoEvents.TIME_UPDATE, VideoEvents.LOAD],
-           updateProgress.bind(this));
+    this.listenMultiple_(
+        this.entry_.video.element,
+        [VideoEvents.TIME_UPDATE, VideoEvents.LOAD],
+        updateProgress.bind(this)
+    );
 
     return progressBar;
   }
@@ -411,11 +418,13 @@ export class CustomControls {
     // Set up controls
     const doc = this.ampdoc_.win.document;
     this.ctrlContainer_ = doc.createElement('amp-custom-controls');
-    this.ctrlContainer_.classList.toggle('amp-custom-controls-light-skin', !darkSkin);
+    const ctrlClasses = this.ctrlContainer_.classList;
+    ctrlClasses.toggle('amp-custom-controls-light-skin', !darkSkin);
     this.ctrlBg_ = doc.createElement('amp-custom-controls-bg');
     this.ctrlBarWrapper_ = doc.createElement('amp-custom-controls-bar-wrapper');
     this.ctrlBarContainer_ = doc.createElement('amp-custom-controls-bar');
-    this.miniCtrlsWrapper_ = doc.createElement('amp-custom-controls-mini-wrapper');
+    this.miniCtrlsWrapper_ =
+      doc.createElement('amp-custom-controls-mini-wrapper');
     this.miniCtrlsContainer_ = doc.createElement('amp-custom-controls-mini');
     this.floatingContainer_ = doc.createElement('amp-custom-controls-floating');
 
@@ -639,7 +648,7 @@ export class CustomControls {
    * Minimal controls are used by default for docked videos.
    * @param {boolean} enabled enable/disable minimal controls
    */
-  toggleMinimalControls(enable = true) {
+  toggleMinimalControls(enabled = true) {
     this.ctrlContainer_.classList.toggle('amp-custom-controls-minimal', enable);
     this.minimal_ = enable;
   }
@@ -660,12 +669,12 @@ export class CustomControls {
       eventTypesArray = eventTypes.split(' ');
     }
     eventTypesArray.forEach(eventType => {
-        listen(
-            element,
-            eventType,
-            listener,
-            opt_evtListenerOpts
-        );
+      listen(
+          element,
+          eventType,
+          listener,
+          opt_evtListenerOpts
+      );
     });
   }
 }

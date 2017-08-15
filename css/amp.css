@@ -758,7 +758,6 @@ amp-custom-controls-bg {
   background-size: 1px 100px;
   background-position: bottom;
   background-repeat-y: no-repeat;
-  z-index: 1;
 }
 
 /* Main controls bar (usually contains progress time,
@@ -774,7 +773,7 @@ amp-custom-controls-bar {
   z-index: 2;
 }
 
-/* Every button/icon is wrapped in an amp-custom-controls-icon-wrapper */ 
+/* Every button/icon is wrapped in an amp-custom-controls-icon-wrapper */
 amp-custom-controls-icon-wrapper {
   width: 24px;
   height: 24px;

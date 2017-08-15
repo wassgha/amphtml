@@ -1240,7 +1240,7 @@ export class VideoEntry {
       return;
     }
     this.hideControls(true, true);
-    this.customControls_.toggleMinimalControls(true);
+    this.customControls_.toggleMinimalControls(/* enabled */ true);
     this.video.element.classList.add(DOCK_CLASS);
     [
       this.customControls_.getElement(),
@@ -1287,7 +1287,10 @@ export class VideoEntry {
         this.drag_();
       }
       this.mouse_(e);
-    }, true, false);
+    }, {
+      'capture': true,
+      'passive': false,
+    });
   }
 
   /**
@@ -1393,14 +1396,14 @@ export class VideoEntry {
    */
   addListener_(element, eventTypes, listener, opt_evtListenerOpts) {
     eventTypes.split(' ').forEach(eventType => {
-        this.dragUnlisteners_.push(
-            listen(
-                element,
-                eventType,
-                listener,
-                opt_evtListenerOpts
-            )
-        );
+      this.dragUnlisteners_.push(
+          listen(
+              element,
+              eventType,
+              listener,
+              opt_evtListenerOpts
+          )
+      );
     });
   }
 
@@ -1545,7 +1548,7 @@ export class VideoEntry {
             this.internalElement_,
           ].forEach(element => {
             this.dragMove_(element);
-          })
+          });
         }
 
         if (!this.isDragging_) {
@@ -1622,7 +1625,7 @@ export class VideoEntry {
       this.unlistenAll_();
       this.hideControls(true, false);
       this.showControls(false);
-      this.customControls_.toggleMinimalControls(false);
+      this.customControls_.toggleMinimalControls(/* enabled */ false);
       // Restore the video inline
       this.video.element.classList.remove(DOCK_CLASS);
       [
@@ -1840,31 +1843,42 @@ export class VideoEntry {
     const skinAttr = this.video.element.getAttribute(
         VideoAttributes.CUSTOM_CTRLS_SKIN
     );
-    const skin = skinAttr == 'dark' ? true : false;
+    const darkSkin = skinAttr == 'dark' ? true : false;
 
+    // Get main controls (in the control bar)
     const mainCtrlsAttr = this.video.element.getAttribute(
         VideoAttributes.CUSTOM_CTRLS_MAIN
     );
     const mainCtrls = mainCtrlsAttr ? mainCtrlsAttr.split(' ') : undefined;
 
+    // Get mini-controls (used when video is docked)
     const miniCtrlsAttr = this.video.element.getAttribute(
         VideoAttributes.CUSTOM_CTRLS_MINI
     );
     const miniCtrls = miniCtrlsAttr ? miniCtrlsAttr.split(' ') : undefined;
 
+    // Get floating button (main action)
     const floatingCtrlAttr = this.video.element.getAttribute(
         VideoAttributes.CUSTOM_CTRLS_FLOATING
     );
-    const floatingCtrl = floatingCtrlAttr ? floatingCtrlAttr : undefined;
+    const floating = floatingCtrlAttr ? floatingCtrlAttr : undefined;
 
     this.customControls_ = new CustomControls(
-      this.ampdoc_,
-      this,
-      skin,
-      mainCtrls,
-      miniCtrls,
-      floatingCtrl
+        this.ampdoc_,
+        this,
+        {
+          darkSkin,
+          mainCtrls,
+          miniCtrls,
+          floating,
+        }
     );
+
+    // If we only use custom controls for docked videos then we hide them
+    // until the video is docked.
+    if (!this.hasCustomCtrls) {
+      this.hideControls(true, true);
+    }
   }
 
   hideControls(customToo = true, disableToo = true) {
