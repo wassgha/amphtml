@@ -19,6 +19,7 @@ import {
   fullscreenEnter,
   fullscreenExit,
   isFullscreenElement,
+  scopedQuerySelectorAll,
 } from '../../../src/dom';
 import {listen} from '../../../src/event-helper';
 import {isLayoutSizeDefined} from '../../../src/layout';
@@ -207,7 +208,8 @@ class AmpVideo extends AMP.BaseElement {
     this.propagateAttributes(ATTRS_TO_PROPAGATE_ON_LAYOUT, this.video_,
         /* opt_removeMissingAttrs */ true);
 
-    this.getRealChildNodes().forEach(child => {
+    const children = scopedQuerySelectorAll(this.element, 'source, track');
+    Array.prototype.forEach.call(children, child => {
       // Skip the video we already added to the element.
       if (this.video_ === child) {
         return;
@@ -241,6 +243,12 @@ class AmpVideo extends AMP.BaseElement {
     listen(video, 'ended', () => {
       this.element.dispatchCustomEvent(VideoEvents.PAUSE);
     });
+    const dispatchTimeUpdate = () => {
+      this.element.dispatchCustomEvent(VideoEvents.TIME_UPDATE);
+    };
+    ['durationchange', 'timeupdate', 'seeking'].map(e => {
+      listen(video, e, dispatchTimeUpdate);
+    });
   }
 
   /** @override */
@@ -268,7 +276,8 @@ class AmpVideo extends AMP.BaseElement {
    * @override
    */
   isInteractive() {
-    return this.element.hasAttribute('controls');
+    return this.element.hasAttribute('controls')
+           || this.element.hasAttribute('custom-controls');
   }
 
   /**
