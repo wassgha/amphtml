@@ -83,7 +83,20 @@ class AmpPinterest extends AMP.BaseElement {
   /** @override */
   layoutCallback() {
     return this.render().then(node => {
-      return this.element.appendChild(node);
+      this.element.appendChild(node);
+      console.log(
+        'Attempting to change height to ',
+        node.getElementsByClassName('-amp-pinterest-embed-pin-inner')[0]
+          .offsetHeight
+      );
+      this.attemptChangeHeight(
+        node.getElementsByClassName('-amp-pinterest-embed-pin-inner')[0]
+          .offsetHeight + 10
+      )
+        .then(() => console.log('height updated'))
+        .catch(() => {
+          console.log('height not updated');
+        });
     });
   }
 
