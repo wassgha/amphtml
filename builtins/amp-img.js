@@ -20,7 +20,11 @@ import {dev} from '../src/log';
 import {guaranteeSrcForSrcsetUnsupportedBrowsers} from '../src/utils/img';
 import {isExperimentOn} from '../src/experiments';
 import {listen} from '../src/event-helper';
-import {propagateObjectFitStyles, setImportantStyles} from '../src/style';
+import {
+  propagateObjectFitStyles,
+  setImportantStyles,
+  setStyle,
+} from '../src/style';
 import {registerElement} from '../src/service/custom-element-registry';
 
 /** @const {string} */
@@ -67,6 +71,13 @@ export class AmpImg extends BaseElement {
      * @private {number}
      * */
     this.sizesWidth_ = 0;
+
+    this.debounceFrameNum_ = 0;
+
+    this.scrollMeasureEl_ = document.getElementsByTagName('main')[0];
+    this.maxScroll_ = 202;
+
+    this.scrollValue_ = 0;
   }
 
   /** @override */
@@ -175,6 +186,10 @@ export class AmpImg extends BaseElement {
       );
     }
 
+    if (this.element.hasAttribute('hero')) {
+      this.maybeInstallScrollObserver_();
+    }
+
     this.propagateAttributes(ATTRIBUTES_TO_PROPAGATE, this.img_);
     guaranteeSrcForSrcsetUnsupportedBrowsers(this.img_);
     this.maybeGenerateSizes_();
@@ -182,6 +197,52 @@ export class AmpImg extends BaseElement {
     propagateObjectFitStyles(this.element, this.img_);
 
     this.element.appendChild(this.img_);
+  }
+
+  /**
+   * This function automatically generates sizes for amp-imgs without
+   * the sizes attribute.
+   * @private
+   */
+  animateHeroScene_() {
+    this.measureMutateElement(
+      () => {
+        this.scrollValue_ = this.scrollMeasureEl_.getBoundingClientRect().top;
+      },
+      () => {
+        const scale = 1 + Math.abs(this.scrollValue_ / this.maxScroll_) * 0.5;
+        setStyle(this.element, 'transform', 'scale(' + scale + ')');
+        // if (this.debounceFrameNum_ < 500) {
+        //   this.debounceFrameNum_++;
+        requestAnimationFrame(this.animateHeroScene_.bind(this));
+        // }
+      },
+      this.element
+    );
+  }
+
+  /**
+   * This function automatically generates sizes for amp-imgs without
+   * the sizes attribute.
+   * @private
+   */
+  maybeInstallScrollObserver_() {
+    // const scrollEl = document.getElementById('scroll');
+    requestAnimationFrame(this.animateHeroScene_.bind(this));
+
+    // let testScrollValue = scrollEl.scrollTop;
+    // scrollEl.addEventListener('scroll', () => {
+    //   const curTestScrollValue = scrollEl.scrollTop;
+    //   this.debounceFrameNum_ = 0;
+    //   if (
+    //     Math.abs(curTestScrollValue - testScrollValue) < 5 ||
+    //     curTestScrollValue > 300
+    //   ) {
+    //     return;
+    //   }
+    //   testScrollValue = curTestScrollValue;
+    //   requestAnimationFrame(this.animateHeroScene_.bind(this));
+    // });
   }
 
   /**
