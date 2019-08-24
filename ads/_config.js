@@ -829,6 +829,10 @@ const adConfig = jsonConfiguration({
     renderStartImplemented: true,
   },
 
+  'readmo': {
+    renderStartImplemented: true,
+  },
+
   'realclick': {
     renderStartImplemented: true,
   },
@@ -1079,6 +1083,10 @@ const adConfig = jsonConfiguration({
       'https://yads.c.yimg.jp/js/yads.js',
     ],
     preconnect: 'https://yads.yahoo.co.jp',
+  },
+
+  'yahoonativeads': {
+    renderStartImplemented: true,
   },
 
   'yandex': {
