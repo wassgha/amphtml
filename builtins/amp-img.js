@@ -72,12 +72,15 @@ export class AmpImg extends BaseElement {
      * */
     this.sizesWidth_ = 0;
 
-    this.debounceFrameNum_ = 0;
+    // this.debounceFrameNum_ = 0;
 
     this.scrollMeasureEl_ = document.getElementsByTagName('main')[0];
+    this.heroShimEl = document.getElementById('hero-img-shim');
     this.maxScroll_ = 202;
 
     this.scrollValue_ = 0;
+
+    this.isHeroExpanded_  = false;
   }
 
   /** @override */
@@ -210,12 +213,18 @@ export class AmpImg extends BaseElement {
         this.scrollValue_ = this.scrollMeasureEl_.getBoundingClientRect().top;
       },
       () => {
-        const scale = 1 + Math.abs(this.scrollValue_ / this.maxScroll_) * 0.5;
-        setStyle(this.element, 'transform', 'scale(' + scale + ')');
-        // if (this.debounceFrameNum_ < 500) {
+        const scale = 1 + (this.scrollValue_ / this.maxScroll_) * 0.7;
+        const opacity = 1.5 + (this.scrollValue_ / this.maxScroll_) * 0.5;
+        setStyle(
+          this.element,
+          'transform',
+          'scale(' + scale + ') translateY(-20%)'
+        );
+        setStyle(this.element, 'opacity', opacity);
+        if (!this.isHeroExpanded_) {
         //   this.debounceFrameNum_++;
         requestAnimationFrame(this.animateHeroScene_.bind(this));
-        // }
+        }
       },
       this.element
     );
@@ -228,7 +237,41 @@ export class AmpImg extends BaseElement {
    */
   maybeInstallScrollObserver_() {
     // const scrollEl = document.getElementById('scroll');
+
     requestAnimationFrame(this.animateHeroScene_.bind(this));
+
+    this.heroShimEl.addEventListener('click', () => {
+      if (!this.isHeroExpanded_) {
+        setStyle(
+          this.element,
+          'height',
+          '100vh'
+        );
+        setStyle(
+          this.element,
+          'transform',
+          'none'
+        );
+        setStyle(
+          this.heroShimEl,
+          'height',
+          '100vh'
+        );
+      } else {
+        setStyle(
+          this.element,
+          'height',
+          'auto'
+        );
+        setStyle(
+          this.heroShimEl,
+          'height',
+          '220px'
+        );
+        requestAnimationFrame(this.animateHeroScene_.bind(this));
+      }
+      this.isHeroExpanded_ = ! this.isHeroExpanded_;
+    });
 
     // let testScrollValue = scrollEl.scrollTop;
     // scrollEl.addEventListener('scroll', () => {
