@@ -315,7 +315,7 @@ export class AmpSidebar extends AMP.BaseElement {
       this.element.getAttribute('data-close-button-aria-label') ||
       'Close the sidebar';
 
-    // Invisible close button at the end of sidebar for screen-readers.
+    // Invisible close button at the end of sidebar for screen-readers!
     const screenReaderCloseButton = this.document_.createElement('button');
 
     screenReaderCloseButton.textContent = ariaLabel;
